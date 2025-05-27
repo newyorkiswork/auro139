@@ -2,10 +2,21 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import AddProductDialog from "./AddProductDialog"
+import { ProductCard } from "@/components/product-card"
+import { CartDrawer } from "@/components/cart-drawer"
+import { useCart } from "@/contexts/cart-context"
+import { Search, SlidersHorizontal, ChevronDown } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+type SortOption = "price-asc" | "price-desc" | "name-asc" | "name-desc"
 
 export default function LaundryProductsPage() {
   const [products, setProducts] = useState<any[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<SortOption>("name-asc")
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const { addItem } = useCart()
 
   useEffect(() => {
     async function fetchProducts() {
@@ -22,28 +33,118 @@ export default function LaundryProductsPage() {
     fetchProducts()
   }, [])
 
+  // Filter and sort products
+  useEffect(() => {
+    let result = [...products]
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(
+        product =>
+          product.product_title.toLowerCase().includes(query) ||
+          product.brand.toLowerCase().includes(query) ||
+          product.description_snippet.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return parseFloat(a.price.replace(/[^0-9.-]+/g, "")) - parseFloat(b.price.replace(/[^0-9.-]+/g, ""))
+        case "price-desc":
+          return parseFloat(b.price.replace(/[^0-9.-]+/g, "")) - parseFloat(a.price.replace(/[^0-9.-]+/g, ""))
+        case "name-asc":
+          return a.product_title.localeCompare(b.product_title)
+        case "name-desc":
+          return b.product_title.localeCompare(a.product_title)
+        default:
+          return 0
+      }
+    })
+
+    setFilteredProducts(result)
+  }, [products, searchQuery, sortBy])
+
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Laundry Products</h2>
-        <AddProductDialog />
+      {/* Header */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold tracking-tight">Laundry Products</h2>
+          <CartDrawer />
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center gap-2 px-4 py-2 rounded-md border bg-background hover:bg-muted transition-colors"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span>Sort by</span>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", isFilterOpen && "rotate-180")} />
+            </button>
+            {isFilterOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-md border bg-background shadow-lg z-10">
+                <div className="p-1">
+                  {[
+                    { value: "name-asc", label: "Name (A-Z)" },
+                    { value: "name-desc", label: "Name (Z-A)" },
+                    { value: "price-asc", label: "Price (Low to High)" },
+                    { value: "price-desc", label: "Price (High to Low)" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value as SortOption)
+                        setIsFilterOpen(false)
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-sm rounded-md",
+                        sortBy === option.value
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map((product, idx) => (
-          <li key={`${product.api_product_id || product.product_page_url || 'product'}-${idx}`} className="border p-4 rounded shadow-sm bg-white flex flex-col">
-            {product.main_image_url && (
-              <img src={product.main_image_url} alt={product.product_title} className="mb-2 w-full h-40 object-contain rounded" />
-            )}
-            <strong className="text-lg">{product.product_title}</strong>
-            <div className="text-sm text-muted-foreground mb-1">{product.brand}</div>
-            <div className="text-sm mb-2">{product.description_snippet}</div>
-            <div className="font-semibold text-primary mb-2">{product.price}</div>
-            {product.product_page_url && (
-              <a href={product.product_page_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm mt-auto">View Product</a>
-            )}
-          </li>
-        ))}
-      </ul>
+
+      {/* Products Grid */}
+      {filteredProducts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-lg text-muted-foreground">No products found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product.api_product_id}
+              product={product}
+              onAddToCart={addItem}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 } 
