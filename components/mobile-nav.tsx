@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink } from '@/components/nav-link'
 import {
   Home,
@@ -21,12 +21,36 @@ import { cn } from '@/lib/utils'
 export function MobileNav() {
   const [isOpen, setIsOpen] = useState(false)
 
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
+  // Close menu on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [])
+
   return (
     <>
       {/* Mobile menu button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="p-2 rounded-md hover:bg-muted md:hidden"
+        className="p-2 rounded-md hover:bg-muted md:hidden touch-manipulation"
+        aria-label="Open menu"
       >
         <svg
           className="h-6 w-6"
@@ -50,18 +74,22 @@ export function MobileNav() {
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={() => setIsOpen(false)}
+        aria-hidden={!isOpen}
       />
 
       {/* Mobile menu */}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out md:hidden',
+          'fixed inset-y-0 left-0 z-50 w-[85vw] max-w-sm bg-white shadow-lg transform transition-transform duration-200 ease-in-out md:hidden',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between p-4 border-b safe-area-inset-top">
             <div className="flex items-center gap-3">
               <div className="bg-gray-900 rounded-lg p-2 flex items-center justify-center">
                 <Settings2 className="h-6 w-6 text-white" />
@@ -73,14 +101,15 @@ export function MobileNav() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-2 rounded-md hover:bg-muted"
+              className="p-2 rounded-md hover:bg-muted touch-manipulation"
+              aria-label="Close menu"
             >
               <X className="h-6 w-6" />
             </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          <nav className="flex-1 overflow-y-auto p-4 space-y-1 safe-area-inset-bottom">
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Navigation
             </div>

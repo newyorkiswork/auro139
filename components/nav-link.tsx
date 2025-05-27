@@ -19,10 +19,10 @@ export function NavLink({ href, children, onClick }: NavLinkProps) {
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-colors w-full",
+        "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors w-full touch-manipulation",
         isActive
           ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted/80"
       )}
     >
       {children}
