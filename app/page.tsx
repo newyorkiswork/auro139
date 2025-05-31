@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { ChatDashModal } from '@/components/ChatDashModal'
+import { ChatDashModal } from '../components/ChatDashModal'
 
 export default function Home() {
   return (
